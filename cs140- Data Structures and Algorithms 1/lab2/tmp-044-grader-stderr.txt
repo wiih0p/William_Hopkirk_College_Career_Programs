@@ -1,0 +1,1 @@
+Error: Maxgrey must be equal to 255
