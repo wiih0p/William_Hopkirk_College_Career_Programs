@@ -1,0 +1,13 @@
+#!/bin/csh
+
+set TARGET = ${HOME}/cosc302/labs/lab4
+if ( ! -d ${TARGET} ) mkdir -p ${TARGET}
+
+cd ~cosc302/labs/lab4
+foreach f ( scrypto1 scrypto2 scrypto3 \
+            baboon.ppm mountains.ppm plane.ppm rocket.ppm truck.ppm \
+            PPM.h PPM.cpp Rnumgen.h Rnumgen.cpp Crypto.cpp \
+            makefile )
+    echo copying $f
+    cp -p $f ${TARGET}
+end
