@@ -1,0 +1,41 @@
+#!/bin/bash
+# Mass Grader for COSC 140 Lab 6 (Candy Crush)
+
+I=1
+TOTAL=0
+SCORE=0
+
+#PATH_GS="/home/ssmit285/public/gradescripts/cs140_bvz/lab6/Gradescript-Examples"
+#SCR_GS="/home/ssmit285/public/gradescripts/cs140_bvz/lab6/gradescript"
+
+PATH_GS="/home/bvanderz/cs140/Labs/Lab6/Gradescript-Examples"
+SCR_GS="/home/bvanderz/cs140/Labs/Lab6/gradescript"
+
+while true; do
+	# Create numeric string from "I"
+	IS=$(printf "%03d" $I)
+
+	# If test case files don't exist, we're done.
+	if [ ! -e "${PATH_GS}/input/${IS}.txt" ]; then
+		break
+	fi
+
+	$SCR_GS $I > /dev/null 2> /dev/null
+
+	RES=$?
+
+	if [ $RES -eq 0 ]; then
+		printf "Problem %s is correct.\n" "$IS"
+		let "SCORE++"
+	else
+		printf "Problem %s is incorrect.\n" "$IS"
+	fi
+
+	let "TOTAL++"
+	let "I++"
+
+	# Clean up
+	rm -f "tmp-${IS}-"*
+done
+
+printf "\n%d Correct out of %d\n" $SCORE $TOTAL

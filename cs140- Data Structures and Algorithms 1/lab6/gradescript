@@ -1,0 +1,109 @@
+#!/bin/bash
+# Test an individual test case
+
+# Argument check
+if [ $# -ne 1 ]; then
+	printf "Usage: %s num\n" "$0"
+	exit 1
+fi
+
+# Convert test case number to string
+CASE=$(printf "%03d" "$1")
+
+# Paths to EXEs
+PATH_BVZ="/home/bvanderz/cs140/Labs/Lab6/candyCrushTest"
+PATH_MY="./candyCrushTest"
+PATH_GS="/home/ssmit285/public/gradescripts/cs140_bvz/lab6/Gradescript-Examples"
+
+# Check if the EXEs exist
+# Your's
+if [ ! -e "$PATH_MY" ]; then
+	printf \
+		"Problem %s is incorrect.\n\nYour \"candyCrushTest\" doesn't exist.\n" \
+		"$1"
+	exit 1
+fi
+
+# BVZ's
+if [ ! -e "$PATH_BVZ" ]; then
+	printf \
+		"Problem %s is incorrect.\n\nInstructor \"candyCrushTest\" doesn't exist.\n" \
+		"$1"
+	exit 1
+fi
+
+# Grade.
+# Instructor Version
+timeout 2s ${PATH_BVZ} "${PATH_GS}/input/${CASE}.dat"  \
+	 < "${PATH_GS}/input/${CASE}.txt"   \
+	 > "tmp-${CASE}-correct-stdout.txt" \
+	2> "tmp-${CASE}-correct-stderr.txt"
+
+# Student Version
+timeout 2s ${PATH_MY} "${PATH_GS}/input/${CASE}.dat"   \
+	 < "${PATH_GS}/input/${CASE}.txt"   \
+	 > "tmp-${CASE}-test-stdout.txt"    \
+	2> "tmp-${CASE}-test-stderr.txt"
+
+TR=$?
+if [ $TR -eq 124 ]; then
+	printf \
+		"Problem %s is incorrect.\n\nYour executable exceeded the 2 second time limit.\n" \
+		"$1"
+	printf "\nTEST:\n"
+	printf "  %s \"%s\" < \"%s\"\n" \
+		"${PATH_MY}"                   \
+		"${PATH_GS}/input/${CASE}.dat" \
+		"${PATH_GS}/input/${CASE}.txt"
+
+	printf "\nFILES:\n"
+	printf "  Your standard output is in \"%s\".\n" "tmp-${CASE}-test-stdout.txt"
+	printf "  Your standard error  is in \"%s\".\n" "tmp-${CASE}-test-stderr.txt"
+	printf "\n"
+	printf "  Correct standard output is in \"%s\".\n" "tmp-${CASE}-correct-stdout.txt"
+	printf "  Correct standard error  is in \"%s\".\n" "tmp-${CASE}-correct-stderr.txt"
+	exit 1
+fi
+
+# Check stdout
+diff "tmp-${CASE}-test-stdout.txt" "tmp-${CASE}-correct-stdout.txt" \
+	 > /dev/null \
+	2> /dev/null
+RES_OUT=$?
+
+# Check stderr
+diff "tmp-${CASE}-test-stderr.txt" "tmp-${CASE}-correct-stderr.txt" \
+	 > /dev/null \
+	2> /dev/null
+RES_ERR=$?
+
+# Give exit code based on result
+if [ $RES_OUT -ne 0 ] || [ $RES_ERR -ne 0 ]; then
+	printf "Problem %s is incorrect.\n\n" "$1"
+	if [ $RES_OUT -ne 0 ]; then
+		printf "Your standard output does not match solution.\n"
+	fi
+	if [ $RES_ERR -ne 0 ]; then
+		printf "Your standard error does not match solution.\n"
+	fi
+
+	printf "\nTEST:\n"
+	printf "  %s \"%s\" < \"%s\"\n" \
+		"${PATH_MY}"                   \
+		"${PATH_GS}/input/${CASE}.dat" \
+		"${PATH_GS}/input/${CASE}.txt"
+
+	printf "\nFILES:\n"
+	printf "  Your standard output is in \"%s\".\n" "tmp-${CASE}-test-stdout.txt"
+	printf "  Your standard error  is in \"%s\".\n" "tmp-${CASE}-test-stderr.txt"
+	printf "\n"
+	printf "  Correct standard output is in \"%s\".\n" "tmp-${CASE}-correct-stdout.txt"
+	printf "  Correct standard error  is in \"%s\".\n" "tmp-${CASE}-correct-stderr.txt"
+	RESULT=1
+else
+	printf "Problem %s is correct.\n" "$1"
+	RESULT=0
+	rm -f "tmp-${CASE}-"*
+fi
+
+exit $RESULT

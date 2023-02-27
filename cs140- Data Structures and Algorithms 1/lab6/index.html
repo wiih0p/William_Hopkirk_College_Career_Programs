@@ -1,0 +1,336 @@
+<center>
+  <h1>COSC 140 -- Lab 6 </h1>
+</center>
+
+<ul>
+  <li> <a href="http://web.eecs.utk.edu/~bvanderz">Brad Vander Zanden</a>
+  <li> Directory for files, executables and gradescript: /home/bvanderz/cs140/Labs/Lab6. There is no makefile for this lab. I want you to get some experience with
+    writing your own compilation commands. You should create include, src, obj,  
+    and bin directories for this lab as you have done in some of the previous
+    labs. Your .hpp files go in the include directory, your .cpp files in the
+    src directory, your .o files in the obj directory, and your executable in the
+    bin directory.
+  <li> Your executable should be named candyCrustTest and it will be created from
+    the candyCrush.cpp and candyCrushTest.cpp files.
+  <li> This lab is intended to give you practice with using the STL doubly linked list library. You will do it by implementing a very simplified version of the game Candy Crush.
+  <li> Files to submit: <b>candyCrush.cpp</b> and <b>candyCrush.hpp</b>. Unlike
+    other labs, you are allowed to add additional methods to the candyCrush.hpp
+    file. You may <b>not</b> alter the signatures of the existing methods nor
+    may you delete the existing methods.
+  <li> For this lab you will be using the srand() function to seed the random
+ 	number generator and the rand() function to generate random numbers.
+    </ul>
+  <hr>
+  <h2>The format of this lab</h2>
+  <p>
+I have written a header file, candyCrush.hpp and a program candyCrushTest.cpp that uses the class/methods defined in that header file. Your job is to create the file candyCrush.cpp, which implements the methods defined in candyCrush.hpp. 
+<p>
+  You are allowed to add additional protected methods to candyCrush.hpp but you
+  may not change the function prototypes of the existing methods nor may you
+  delete any of them. You are not allowed to modify candyCrushTest.cpp. You will  turn in candyCrush.hpp and candyCrush.cpp, and the TA's will compile and test them with the candyCrushTest.cpp that is in the lab directory.
+  <hr>
+  <h2> Candy Crush </h2>
+
+  Candy Crush is a match-based puzzle game that awards points for collapsing columns or rows of contiguous candies. Below is a sample Candy Crush screen shot:
+  <p>
+    <img src="candy_crush.jpg">
+  <p>
+One of the possible matches would be the two yellow-colored toffee candies at the beginning of the first row of the diagram and another would be the two purple-colored candies at the end of the first row of the diagram. There are other matches you could make in the columns, but for this lab we are going to focus on row matches. Specifically you are going to use an STL list to implement a single row of a simplified Candy Crush like game.
+<p>
+It would be too complicated to create fancy graphics for this lab assignment, so instead you will be using a list of strings to represent flavors of candy. In Part A you will write code to randomly generate the first candy sequence, put it in the list, and print out the portion of the list that you filled. In Part B you will generate enough candy sequences to completely fill a 12 item row of candies. In Part B you will also write code to allow the user to select a sequence of candies and assign points based on the length of the sequence. Finally in Part C you will remove the candy sequence selected by the user from the row, slide the remaining candies to the left, and fill the right side of the row with new candies. 
+<hr>
+<h2> Input </h2>
+<p>
+  Your program will read from stdin. Here is some sample input and how to interpret it:
+<pre>
+256  10     <b>// Seed for the random number generator and length of a candy crush row</b>
+grape cherry orange lemon toffee    <b>// The candy flavors</b>
+20 10  <b>// The probability for each possible candy sequence length </b>
+10 20
+25 30
+20 50
+15 70
+15 120
+0  150
+0  180
+0  210
+0 300
+</pre>
+You will be using a random number generator for this lab so the first input is the seed you will use to the random number generator. It must be an integer.
+<p>
+  The second input on the first line is the length of the candy crush row and
+  must be a non-negative integer between 1 and 100.
+<p>
+The second line of the input will be a list of the candy flavors that will be used in the game.
+<p>
+  The remaining lines of the input will be the probabilities of generating a flavor sequence of a particular length and the points they are worth. The sequence lengths are not explicitly given. Your program should assume they begin with 1. Hence in the above input there is a 20% chance of generating a sequence of length 1 and it is worth 10 points if a player selects a sequence of length 1. Similarly there is a 25% chance of generating a sequence of length 3 and it is worth 30 points when a player selects it. You must provide a probability and point value for every sequence length up to the row length, since it is possible to have a row that consists only of one flavor. Note that there is no chance of generating a sequence of length 7-10. However, suppose you generate a "toffee" sequence of length 4 and then generate a "toffee" sequence of length
+  5. You will end up with a contiguous "toffee" sequence of length 9.
+<p>
+  The probabilities must add up to 100 and must be non-negative integers. 
+<p>
+  <hr>
+  <h2>candyCrush.hpp</h2>
+<p>
+  Take a look at the header file <a href="candyCrush.hpp">candyCrush.hpp</a>:
+    <p><center><table border=3 cellpadding=3><td><pre>
+class candyCrush {
+public:
+  candyCrush(const string &inputFile);
+  int getRowLength() const;
+  int getScore() const;
+  void printCandy() const;
+  int play(int choice);		
+protected:
+  list&lt;string&gt; candy;
+  vector&lt;string&gt; flavors;
+  vector&lt;int&gt; points;
+  vector&lt;int&gt; probabilities;
+  int score;
+  int rowLength;
+};
+	    </pre>
+	  </td>
+	</table>
+      </center>
+    <p>
+      You must minimally implement this public API. You are free to add additional
+      protected methods and instance variables to help with your implementation. The method descriptions are as follows:
+    <p>
+      <b>candyCrush(const string &inputFile):</b> This constructor function sets up your initial game state. 
+  In this constructor you will generate a random sequence of candies and assign them to your candy list. You will do this as follows:
+
+      <ol>
+	<li> You will read the input and assign it to the appropriate instance
+	  variables. Here are a few additional instructions about what to
+	  do with input:
+	  <p>
+	    <ul>
+	      <li> pass the seed to the srand function to initialize the random number generator. You do not need to save the seed once it's been passed to the
+	      srand function.
+	      <li> The probabilities should be stored as cumulative probabilities in the <tt>probabilities</tt> vector rather than individual probabilities. For example, suppose the maximum possible sequence was 4 and your probabilities were 40, 30, 20, and 10. Then your
+	  probabilities vector should be <tt>40, 70, 90, 100</tt>, not
+	  <tt>40, 30, 20, 10</tt>. The reason for storing cumulative probabilities is so that you can easily generate a sequence from a random number between
+	  0 and 100. For example, if the random number is 30, you would generate
+	  a sequence of length 1 because 30 is between 0 and 40. If the random
+	  number is 90, then you will generate a sequence of length 4 because
+	  95 is between 90 and 100. Note that these cumulative probabilities give each sequence the appropriate probability of being chosen because out of 100 random numbers, each has the appropriate proportion assigned to its sequence length. 
+	  </ul>
+	<li> You will then perform the following operations to generate the candy sequence and fill the list:
+	  <ol>
+	    <li> use <tt>rand()</tt> to generate a random number between 0 and n-1 to choose a candy where n is the number of candy flavors. Assign numbers to the candy flavors in the order they are presented to you in the input. For example given the sample input shown above, assignment of numbers to candies should be as follows:
+	      <pre>
+0: grape
+1: cherry
+2: orange
+3: lemon
+4: toffee
+</pre>
+	    <li> use <tt>rand()</tt> to generate a random number between 0 and 99 to choose the length of the candy sequence. Find the range in the <tt>probabilities</tt> vector which contains this number. Add 1 to the index associated with that range and you have the length of your sequence. The random number must be <b>less than</b> the cumulative probability associated with the index for that index to be chosen. For example, suppose your probabilities vector is:
+<pre>
+0: 20 
+1: 30
+2: 55
+3: 75
+4: 90
+5: 100
+</pre>
+and your random number is 90. Then the index you will choose is 5, not 4, and
+your sequence length will be 6. If you want to make life easier on yourself, you
+can start storing your probabilities at index location 1 rather than 0, so that you don't have to remember to add 1 to the index to get your sequence length.
+<li> If the sequence length is <tt>k</tt>, add up to <tt>k</tt> strings of
+  the flavor you generated in step 1 to the candy list. If adding the full
+  <tt>k</tt> strings would cause you to overflow the row, then stop when
+  you have filled the row.
+  </ol>
+	</li>
+  <p>
+    <b>int getRowLength() const</b>: Returns the length of the candy crush row.
+  <p>
+    <b>void printCandy() const</b>: Prints the candy crush row as 8 flavors per row,
+    left justified, in fields 10 characters wide.
+    <p>
+      <b>int play(int choice)</b>: <tt>choice</tt> is an integer from
+      0 to <tt>rowLength-1</tt> indicating which candy flavor the player
+      selected. The test program error checks rowLength so you do not have
+      to do so yourself. The return value is the number of points scored by the player
+      on this turn. This method must:
+    <p>
+      <ol>
+		<li> Find the candy list element corresponding to the player's choice.
+		<li> Compute the length of the flavor's sequence and add the points
+		  for that sequence to the user's score.
+		<li> Delete the strings in that sequence from the candy list
+		<li> If the sequence is of length <tt>k</tt>, then starting at the
+		  end of the candy list, add <tt>k</tt> flavors to the end of the list
+		  using the same strategy you used to generate the initial list
+		  (i.e., generate a flavor and a sequence length, add that many
+		  flavors to the end of the list, and repeat until the row is
+		  full). You probably want a separate method named something like
+		  <tt>fillCandyList</tt> to fill the list with candy.
+		</li>
+	  </ol>
+	  <p>
+	    <b>play()</b> does not print anything. There are commands you
+	    can use in the test
+	    program to print the candy crush row or the player's current
+	    score. 
+  <p>
+    <b>int getScore()</b>: Returns the players current score. 
+  <p>
+</ol>
+    <hr>
+    <h2> Testing Your Program </h2>
+    <p>
+     I've written a main() procedure in candyCrushTest.cpp. It needs to be compiled with your implementation of candyCrush.cpp. You run it as follows:
+    <p><center><table border=3 cellpadding=3><td><pre>
+./candyCrushTest inputFile
+</pre></td></table></center>	      
+<p>
+Then it accepts commands on standard input:
+<ul>
+  <li> PRINT: prints the candy list in the format stated above.
+  <li> CHOOSE index: chooses a flavor in the candy crush row.
+  <li> SCORE: prints the player's current score
+  <li> QUIT: quits
+</ul>
+<h3>The Gradescript</h3>
+<p>
+The gradescript is in an incremental format. The test cases are laid out as follows:
+<ul>
+	<li><b>Cases 1-10:</b> Tests PRINT</li>
+	<li><b>Cases 11-20:</b> Tests PRINT and CHOOSE</li>
+	<li><b>Cases 21-30:</b> Tests PRINT, CHOOSE and SCORE</li>
+	<li><b>Cases 31-100:</b> More complex input cases and error checking</li>
+</ul>
+</p>
+<p>
+The grading programs are in <b>/home/ssmit285/public/gradescripts/cs140_bvz/lab6</b> as <b>gradeall</b> and <b>gradescript</b>, like usual.
+Your executable must be named <b>candyCrushTest</b> for you to run it, and it will flag you wrong if it doesn't find that file.
+</p>
+<p>
+Don't go assuming that the test cases are error-free either. I've purposefully hidden a few faulty/bad examples (14 in total) in the gradescripts from 31 to 100. Just like the previous lab assignments, you can use the gradescripts and solution example to debug until you match outputs. If you run into an infinite loop, the gradescript will auto-fail that particular test case after 2 seconds of run time.
+</p>
+<hr>
+<h2> Examples </h2>
+<p>
+  The following example interaction with the test program uses this input file:
+  <pre>
+157  10   
+grape cherry orange lemon toffee
+20 10 
+10 20
+25 30
+20 50
+15 70
+10 120
+0  150
+0  180
+0  210
+0 300
+</pre>
+  Here is a series of sample interactions with the test program and the output
+  the test program will produce. In each case I have highlighted the flavor that the user has chosen:
+  <pre>
+UNIX&gt; ./candyCrushTest input.txt    
+PRINT
+<b>lemon</b>     grape     grape     grape     grape     grape     grape     orange    
+orange    cherry    
+
+CHOOSE 0
+you scored 10 points
+</pre>
+  The player chose index location 0, which corresponds to "lemon". There is
+  a sequence of 1 lemon flavors here so the player receives 10 points (note
+  that in the input file, a sequence of length 1 is worth 10 points).
+<pre>
+PRINT
+grape     grape     grape     <b>grape</b>     grape     grape     orange    orange    
+cherry    grape     
+
+CHOOSE 3
+you scored 120 points
+</pre>
+Notice that after the user chooses the lemon sequence in the above example, that the lemon has been deleted and the remaining entries have been "moved over" one element. Finally a new flavor, cherry, has been added at the end of the row.
+<p>
+The user now chooses a grape candy. This grape candy is in the middle of a sequence of 6 grape candies so the user scores 120 points. The program then deletes this 6 candy sequence, moves the remaining 4 candies to the left, and adds 4 candies at the end of the row to get the following sequence:
+<pre>
+PRINT
+orange    orange    cherry    grape     lemon     lemon     lemon     lemon     
+orange    <b>orange</b>
+
+CHOOSE 9
+you scored 20 points
+</pre>
+The user now chooses the last candy in the sequence, which is an orange candy. This candy belongs to a sequence of two orange candies and hence the user scores 20 points. The program deletes this sequence of two candies and adds two new candies to the end of the row to get the following sequence:
+<pre>
+PRINT
+orange    orange    cherry    grape     lemon     lemon     lemon     lemon     
+lemon     lemon
+
+
+SCORE
+current score = 150
+
+QUIT
+</pre>
+Note that two lemon candies were added at the end of the sequence, so the lemon sequence that was previously 4 candies long is now 6 candies long. Hence it is possible for candy sequences to increase in length, either because additional candies of the same flavor are added at the end of a row, or because candies with the same flavor are both before and after a chosen candy sequence. For example, suppose that you had the following row (<b>I have arbitrarily chosen this row as an example--it was not generated by my candyCrush executable</b>):
+<pre>
+PRINT
+toffee    toffee    toffee    grape     grape     toffee    toffee    toffee    
+toffee    toffee    
+
+CHOOSE 4
+you scored 20 points
+  </pre>
+The player chose index location 4, which corresponds to "grape". When the
+grape sequence is deleted, the two toffee sequences on either side of the
+grape sequence are concatenated, resulting in a toffee sequence that is 8
+candies long:
+  <pre>
+PRINT
+toffee    toffee    toffee    toffee    toffee    toffee    toffee    toffee    lemon     orange
+  </pre>
+  <hr>
+  <h2> Issues With The Random Number Generator </h2>
+<p>
+  In order to generate to same output as my sample executable, you will need
+  to do two things:
+<p>
+  <ol>
+    <li> Run your program on a hydra machine. Different machines/OS's will
+      use different random number generators and hence will generate different
+      random numbers from the same initial seed. Hence if you want to match
+      my output, you need to run your executable on a hydra machine. All of
+      the hydra machines run the same OS and hence the same random number
+      generator so you can use any of the hydra machines.
+      <p>
+	<li> Use the numbers generated by the random number generator in the
+	  same way that I used them. Here is the order you should use:
+	  <p>
+	    <ol>
+	      <li> Generate the random number used to select the
+		candy (grape, cherry, orange, etc).
+	      <li> Generate the random number used to select the length
+		of the candy sequence.
+	    </ol>
+	    <p>
+	    <li> You must use srand() to seed the random number generator and rand()
+	      to generate your random numbers. If you use a different function,
+	      such as lrand48(), then you will get random numbers that are
+	      different from mine.
+  </ol>
+  <hr>
+<h2> Use Incremental Development </h2>
+<p>
+  As always you should strive to break the program into parts and code up and
+  test each part before moving to the next part. I coded the constructor,
+  printCandy, and rowLength functions first, then the play and getScore
+  functions, and finally I inserted error checking code. There are a fair
+  number of error checks you need to perform. In order to use the test editor
+  to test your constructor and printCandy functions (use the PRINT command),
+  you will need to provide empty stubs for the remaining methods in the public
+  API.
+<p>
+  In lab you will be asked to
+  try to enumerate these error checks. You can run my test executable to see
+  the exact error message that your program should generate.
